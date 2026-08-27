@@ -1,3 +1,23 @@
+## Documentation
+
+All work on this assessment is written up in the [`docs/`](docs/) folder.
+
+- **[`docs/initial_exploratory_analysis.md`](docs/initial_exploratory_analysis.md)** — the deep dive into the
+  Pipedrive source data: CRM glossary, the deal lifecycle (stages, activities,
+  status) with diagrams, a full CSV ↔ Postgres comparison, a column-by-column
+  data dictionary with accepted values, source-freshness threshold analysis, and
+  the data-quality findings that shaped the model design.
+
+Model-level documentation lives next to the code: source and freshness/PK tests
+in [`models/sources.yml`](models/sources.yml), and per-model column descriptions
+and tests in the layer folders under [`models/`](models/).
+
+**Each `models/` subfolder has its own `README.md`** with that layer's general
+rules — naming conventions, column-naming standards, and how tests are split
+between layers. See [`models/staging/README.md`](models/staging/README.md) for
+the staging layer; later layers (intermediate, reporting) follow the same
+pattern.
+
 ## Setup
 
 1. Download Docker Desktop (if you don’t have installed) using the official website, install and launch.

@@ -1,8 +1,112 @@
 version: 2
 
 sources:
-  - name: postgres_public
+  - name: pipedrive
+    description: >
+      Raw Pipedrive CRM extracts loaded into the local Postgres `public` schema
+      by `raw_data/load_data.sh` (`\COPY` from the CSVs in `raw_data/`).
+      See `docs/initial_exploratory_analysis.md` for the full column dictionary and
+      data-quality notes.
     database: postgres
     schema: public
+
+    # Source layer carries only:
+    #   1. freshness (is the feed arriving on time?)
+    #   2. primary-key tests (unique + not_null)
+    # All other tests (accepted_values, relationships, not_null on non-key
+    # columns, natural-key uniqueness) live on the staging models.
+    #
+    # Freshness thresholds are sized from the historical spacing of each
+    # timestamp column (rule of thumb: warn = ~2x p99 gap, error = ~4x p99 gap,
+    # always above the observed max gap). Full analysis + the per-table table:
+    # docs/initial_exploratory_analysis.md section 3.1.
+    #
+    # NOTE: the local load is a static 2024 CSV snapshot, so `dbt source
+    # freshness` will report STALE until these sources point at a live feed.
+    # Default below applies to any table that does not override it.
+    freshness:
+      warn_after: {count: 24, period: hour}
+      error_after: {count: 48, period: hour}
+
     tables:
+      - name: users
+        description: One row per Pipedrive user (sales rep / deal owner).
+        loaded_at_field: modified   # p99 gap 19.5h, max gap 35.6h
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        columns:
+          - name: id
+            description: Pipedrive user id. Primary key.
+            tests:
+              - unique
+              - not_null
+
+      - name: stages
+        description: One row per pipeline stage. The nine ordered funnel steps.
+        # No timestamp column -> freshness not computable. Config table: it
+        # changes on a sync cadence, not a data cadence. Re-enable with
+        # warn 26h / error 50h once the loader stamps a _loaded_at column.
+        freshness: null
+        columns:
+          - name: stage_id
+            description: Ordered stage position (1-9). Primary key.
+            tests:
+              - unique
+              - not_null
+
+      - name: activity_types
+        description: Catalogue of configurable activity types (4 rows).
+        freshness: null   # no timestamp column; see stages note
+        columns:
+          - name: id
+            description: Activity-type id. Primary key.
+            tests:
+              - unique
+              - not_null
+          - name: active
+            description: >
+              Enabled flag. Raw-feed enum check: must be exactly 'Yes' / 'No' so
+              the boolean cast in stg_pipedrive__activity_types.is_active is safe.
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ["Yes", "No"]
+
+      - name: fields
+        description: >
+          Metadata for the deal fields tracked in deal_changes, including enum
+          option sets (Pipedrive dealFields slice, 4 rows).
+        freshness: null   # no timestamp column; see stages note
+        columns:
+          - name: id
+            description: Field id. Primary key.
+            tests:
+              - unique
+              - not_null
+
       - name: activity
+        description: >
+          One row per activity event (call / meeting / follow-up). No primary
+          key - activity_id is reused by 11 unrelated activities.
+        # No ingest timestamp. `due_to` is a SCHEDULED date, not a load time, so
+        # this is a stopgap proxy only - replace with an added_at column.
+        loaded_at_field: due_to      # p99 gap 6.3h, max gap 9.6h
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        columns:
+          - name: activity_id
+            description: Pipedrive activity id. Not a reliable key (11 collisions).
+
+      - name: deal_changes
+        description: >
+          Deal field change log - one row per logged change to a single field of
+          a single deal. 15,406 rows across 1,995 deals. No primary key.
+        loaded_at_field: change_time   # p99 gap ~5h (active period)
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
+        columns:
+          - name: deal_id
+            description: Deal that changed.

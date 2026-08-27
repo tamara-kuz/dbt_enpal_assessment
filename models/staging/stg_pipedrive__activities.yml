@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__activities
+    description: >
+      Staging for Pipedrive activity events (calls / meetings / follow-ups).
+      One row per activity event, 4,579 rows.
+
+      Caveats: `activity_id` is NOT unique (11 ids are reused by unrelated
+      activities), so the `unique` test below is set to `warn`. The `deal_id`
+      population here is almost entirely disjoint from
+      `stg_pipedrive__deal_changes` (only 8 deals in common).
+    columns:
+      - name: activity_id
+        description: Pipedrive activity id. Not a reliable key - 11 collisions.
+        tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
+      - name: activity_type_key
+        description: Activity type key -> stg_pipedrive__activity_types.activity_type_key.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["meeting", "sc_2", "follow_up", "after_close_call"]
+          - relationships:
+              arguments:
+                to: ref('stg_pipedrive__activity_types')
+                field: activity_type_key
+      - name: assigned_user_id
+        description: User the activity is assigned to -> stg_pipedrive__users.user_id.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pipedrive__users')
+                field: user_id
+      - name: deal_id
+        description: Deal the activity is attached to. Nearly disjoint from deal_changes.
+        tests:
+          - not_null
+      - name: is_done
+        description: Whether the activity is completed. ~50/50 true/false.
+        tests:
+          - not_null
+      - name: due_at
+        description: Scheduled due date/time (2024-01-01 to 2024-09-13).
+        tests:
+          - not_null

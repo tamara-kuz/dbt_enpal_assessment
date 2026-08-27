@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__deal_changes
+    description: >
+      Staging for the Pipedrive deal field change log. One row per logged change
+      to a single field of a single deal. 15,406 rows across 1,995 deals.
+
+      There is no primary key (append-only event log). `new_value` is polymorphic
+      text; typed helper columns (`new_stage_id`, `new_owner_user_id`,
+      `deal_created_at`, `new_lost_reason_id`) are populated only for the matching
+      `changed_field_key`. This log has no status / won / lost / value keys - deal
+      outcome must be inferred from stage progression.
+    columns:
+      - name: deal_id
+        description: Deal that changed.
+        tests:
+          - not_null
+      - name: changed_at
+        description: When the change was recorded (2024-01 to 2025-03).
+        tests:
+          - not_null
+      - name: changed_field_key
+        description: Which deal field changed. FK -> stg_pipedrive__fields.field_key.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pipedrive__fields')
+                field: field_key
+      - name: new_value
+        description: New value as raw text; interpret via changed_field_key.
+        tests:
+          - not_null
+      - name: new_stage_id
+        description: >
+          New pipeline stage id, set only when changed_field_key = 'stage_id'.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: new_owner_user_id
+        description: >
+          New deal owner, set only when changed_field_key = 'user_id'.
+          Resolves to stg_pipedrive__users.user_id (0 orphans).
+      - name: deal_created_at
+        description: >
+          Deal creation timestamp, set only when changed_field_key = 'add_time'.
+          Equals the deal's earliest changed_at for 1,992 of 1,995 deals.
+      - name: new_lost_reason_id
+        description: >
+          Lost-reason code, set only when changed_field_key = 'lost_reason'.
+          Present for every deal in this dataset, so not a reliable "deal lost"
+          signal on its own.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false

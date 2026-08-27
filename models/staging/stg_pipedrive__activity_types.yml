@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__activity_types
+    description: >
+      Staging for the Pipedrive activity-type catalogue. Four rows. `is_active`
+      is a UI configuration flag only - disabled types (follow_up) still have
+      historical activity data.
+    columns:
+      - name: activity_type_id
+        description: Activity-type id. Primary key (unique + not_null tested on the source).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+      - name: activity_type_name
+        description: Human label shown in the Pipedrive UI.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Sales Call 1", "Sales Call 2", "Follow Up Call", "After Close Call"]
+      - name: activity_type_key
+        description: Machine key (key_string) that stg_pipedrive__activities.activity_type_key joins to.
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["meeting", "sc_2", "follow_up", "after_close_call"]
+      - name: is_active
+        description: >
+          Whether the type is enabled in Pipedrive. Boolean cast of the source
+          `active` text ('Yes' -> true, 'No' -> false); the source `active`
+          column carries the Yes/No accepted_values check.
+        tests:
+          - not_null

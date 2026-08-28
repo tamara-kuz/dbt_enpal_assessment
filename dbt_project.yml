@@ -40,6 +40,8 @@ models:
       +materialized: view
     marts:
       +materialized: table
+    presentation:
+      +materialized: table
 
 seeds:
   enpal_assessment_project:

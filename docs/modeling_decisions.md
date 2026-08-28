@@ -81,3 +81,34 @@ Kept deliberately as a **stable seam**, not because SCD1 adds columns over
 - The SCD2 upgrade path is pre-planned: add `snapshots/pipedrive_users_snapshot.sql`
   (`check` strategy on `name` / `email`), let it accrue, then rebuild
   `dim_users` from the snapshot with SCD2 columns — no consumer changes.
+
+## The funnel report — `rep_sales_funnel_monthly`
+
+Built to the brief: columns `month`, `kpi_name`, `funnel_step`, `deals_count`;
+one row per `(month, funnel_step)`. `kpi_name` is the step name with its kind
+appended — `"Qualified Lead (stage)"`, `"Sales Call 1 (activity)"` — so no row
+can be misread as a funnel sub-count when it isn't one. `funnel_step` is the
+number ("1".."9", "2.1", "3.1"); `deals_count` = distinct deals that **reached**
+that step in the month, or, for the sub-steps, that had a Sales Call due that
+month. Full column reference: [`models/presentation/README.md`](../models/presentation/README.md).
+
+Structural points:
+
+- **The 11 step names come from a seed** (`seeds/funnel_steps.csv`, read via
+  `stg_seed__funnel_steps`), not a hardcoded `values (...)` list in the model. The seed
+  also holds each step's `step_kind` (`stage` / `activity`) and `join_key`, so
+  the model joins to it rather than `CASE`-ing on stage ids / activity type keys.
+- **Steps 1-9 are built on `fct_deal_stage_progression`** — the fact that carries
+  the month each deal reached each step (see "Two shapes of the deal change log"
+  above).
+- **"Reached step N" includes deals that skipped it** — stages are skippable but
+  monotonic, so reaching N means the deal passed every step below N. Counting
+  only literal `stage_id = N` rows would break monotonicity (the exploratory analysis found most deals skip a
+  stage — see `initial_exploratory_analysis.md` §5.3).
+- **Sub-steps 2.1 / 3.1 come from `fct_activities`** on a near-disjoint deal
+  population (§5.2) — a parallel read, not sub-counts of steps 2 / 3.
+- The report is **sparse** (zero-count `(month, step)` rows omitted). A dense
+  grid would be a months × steps cross join in the report.
+- `deals_count` is a **monthly flow, not a cumulative funnel** — down a single
+  month it doesn't shrink step-by-step. Proven in
+  [`post_integration_validation.md`](post_integration_validation.md).

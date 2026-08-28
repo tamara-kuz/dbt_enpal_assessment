@@ -36,3 +36,11 @@ models:
     +materialized: table
     staging:
       +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+
+seeds:
+  enpal_assessment_project:
+    +schema: pipedrive_analytics

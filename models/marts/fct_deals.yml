@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: fct_deals
+    description: >
+      One row per deal, from int_pipedrive__deals, enriched with stage
+      names, current owner name and lost-reason label. `lost_reason_label` is
+      noise (present on every deal, uniform) - not a won/lost signal.
+    meta:
+      layer: marts
+      grain: one row per deal
+    columns:
+      - name: deal_id
+        description: Pipedrive deal id. Primary key.
+        tests:
+          - unique
+          - not_null
+      - name: created_at
+        description: Deal creation timestamp.
+        tests:
+          - not_null
+      - name: created_month
+        description: created_at truncated to month (date).
+        tests:
+          - not_null
+      - name: pipeline_duration_days
+        description: >
+          Whole days from created_at to last_stage_changed_at. Can be slightly
+          negative for deals whose add_time is not their earliest recorded change.
+        tests:
+          - not_null
+      - name: current_owner_user_id
+        description: Most recent owner. FK -> dim_users.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_users')
+                field: user_id
+      - name: current_owner_name
+        description: Current owner's name.
+        tests:
+          - not_null
+      - name: owner_change_count
+        description: Number of owner changes logged (>= 1).
+        tests:
+          - not_null
+      - name: current_stage_id
+        description: Stage from the most recent stage change.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: current_stage_name
+        description: Label of current_stage_id (from stg_pipedrive__stages).
+        tests:
+          - not_null
+      - name: max_stage_id
+        description: Furthest stage reached. Use this for "reached funnel step N".
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: max_stage_name
+        description: Label of max_stage_id.
+        tests:
+          - not_null
+      - name: first_stage_changed_at
+        description: Timestamp of the deal's first stage change.
+        tests:
+          - not_null
+      - name: last_stage_changed_at
+        description: Timestamp of the deal's most recent stage change.
+        tests:
+          - not_null
+      - name: stage_change_count
+        description: Number of stage changes logged (>= 1).
+        tests:
+          - not_null
+      - name: lost_reason_id
+        description: Lost-reason code (1-5). Noise - not a won/lost signal.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: lost_reason_label
+        description: Label of lost_reason_id (from the fields option set).
+        tests:
+          - not_null
+      - name: lost_reason_at
+        description: Timestamp of the lost_reason change.
+        tests:
+          - not_null

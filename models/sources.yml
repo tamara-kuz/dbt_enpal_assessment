@@ -31,7 +31,7 @@ sources:
     tables:
       - name: users
         description: One row per Pipedrive user (sales rep / deal owner).
-        loaded_at_field: modified   # p99 gap 19.5h, max gap 35.6h
+        loaded_at_field: modified   # threshold sized from the cadence analysis (docs 3.1)
         freshness:
           warn_after: {count: 24, period: hour}
           error_after: {count: 48, period: hour}
@@ -56,7 +56,7 @@ sources:
               - not_null
 
       - name: activity_types
-        description: Catalogue of configurable activity types (4 rows).
+        description: Catalogue of configurable activity types.
         freshness: null   # no timestamp column; see stages note
         columns:
           - name: id
@@ -76,7 +76,7 @@ sources:
       - name: fields
         description: >
           Metadata for the deal fields tracked in deal_changes, including enum
-          option sets (Pipedrive dealFields slice, 4 rows).
+          option sets (Pipedrive dealFields slice).
         freshness: null   # no timestamp column; see stages note
         columns:
           - name: id
@@ -88,22 +88,23 @@ sources:
       - name: activity
         description: >
           One row per activity event (call / meeting / follow-up). No primary
-          key - activity_id is reused by 11 unrelated activities.
+          key - activity_id is reused by unrelated activities (see the
+          exploratory analysis).
         # No ingest timestamp. `due_to` is a SCHEDULED date, not a load time, so
         # this is a stopgap proxy only - replace with an added_at column.
-        loaded_at_field: due_to      # p99 gap 6.3h, max gap 9.6h
+        loaded_at_field: due_to      # threshold sized from the cadence analysis (docs 3.1)
         freshness:
           warn_after: {count: 12, period: hour}
           error_after: {count: 24, period: hour}
         columns:
           - name: activity_id
-            description: Pipedrive activity id. Not a reliable key (11 collisions).
+            description: Pipedrive activity id. Not a reliable key - ids are shared (see the exploratory analysis).
 
       - name: deal_changes
         description: >
           Deal field change log - one row per logged change to a single field of
-          a single deal. 15,406 rows across 1,995 deals. No primary key.
-        loaded_at_field: change_time   # p99 gap ~5h (active period)
+          a single deal. No primary key.
+        loaded_at_field: change_time   # threshold sized from the cadence analysis (docs 3.1)
         freshness:
           warn_after: {count: 12, period: hour}
           error_after: {count: 24, period: hour}

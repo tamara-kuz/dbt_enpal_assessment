@@ -1,0 +1,19 @@
+version: 2
+
+seeds:
+  - name: funnel_steps
+    description: >
+      Sales-funnel step definitions (steps 1-9 plus the two Sales Call
+      sub-steps). Authored here; consumed via stg_funnel_steps. Column meanings
+      and value-level tests are on that staging model.
+    config:
+      # "2.1" / "3.1" would otherwise make dbt infer a numeric column ("1" -> 1.0)
+      column_types:
+        funnel_step: varchar(8)
+        join_key: varchar(20)
+    columns:
+      - name: funnel_step
+        description: Step number as text ("1".."9", "2.1", "3.1"). Natural key.
+        tests:
+          - unique
+          - not_null

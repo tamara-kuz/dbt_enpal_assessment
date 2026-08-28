@@ -1,7 +1,7 @@
 # Staging layer
 
-One-to-one with the raw Pipedrive source tables: rename + cast only, no joins,
-filters, aggregation or business logic. Materialised as views.
+One-to-one with the raw Pipedrive source tables (and seeds): rename + cast only,
+no joins, filters, aggregation or business logic. Materialised as views.
 
 ## Model naming — `stg_<source>__<object>`
 
@@ -12,6 +12,9 @@ filters, aggregation or business logic. Materialised as views.
 - Namespacing by source keeps names unique if a second system also has a
   `users` / `fields` table later.
 - File name = model name (dbt Labs standard convention).
+- **Seeds** get a staging model too (so nothing downstream refs a raw seed),
+  under the `seed` origin token instead of a source system:
+  `stg_seed__funnel_steps`.
 
 ## Column naming — unified across all models
 

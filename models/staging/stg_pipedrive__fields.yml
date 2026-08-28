@@ -3,8 +3,11 @@ version: 2
 models:
   - name: stg_pipedrive__fields
     description: >
-      Staging for Pipedrive deal-field metadata - the four fields that appear in
+      Staging for Pipedrive deal-field metadata - the fields that appear in
       the deal change log, plus their enum option sets. 1:1 with `pipedrive.fields`.
+    meta:
+      layer: staging
+      grain: one row per tracked deal field
     columns:
       - name: field_id
         description: Field id. Primary key (unique + not_null tested on the source).

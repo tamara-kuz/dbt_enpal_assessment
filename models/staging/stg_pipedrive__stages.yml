@@ -3,9 +3,12 @@ version: 2
 models:
   - name: stg_pipedrive__stages
     description: >
-      Staging for Pipedrive pipeline stages. One row per stage, nine rows total.
+      Staging for Pipedrive pipeline stages. One row per stage (the nine funnel steps).
       `stage_id` is the ordered position in the single pipeline and equals the
       assessment funnel step number.
+    meta:
+      layer: staging
+      grain: one row per pipeline stage
     columns:
       - name: stage_id
         description: Ordered stage position. Primary key (unique + not_null tested on the source).

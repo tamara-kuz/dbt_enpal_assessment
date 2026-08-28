@@ -4,15 +4,18 @@ models:
   - name: stg_pipedrive__activities
     description: >
       Staging for Pipedrive activity events (calls / meetings / follow-ups).
-      One row per activity event, 4,579 rows.
+      One row per activity event.
 
-      Caveats: `activity_id` is NOT unique (11 ids are reused by unrelated
-      activities), so the `unique` test below is set to `warn`. The `deal_id`
-      population here is almost entirely disjoint from
-      `stg_pipedrive__deal_changes` (only 8 deals in common).
+      Caveats (from the exploratory analysis): `activity_id` is NOT unique - some
+      ids are reused by unrelated activities, so the `unique` test below is set
+      to `warn`. The `deal_id` population here is almost entirely disjoint from
+      `stg_pipedrive__deal_changes`.
+    meta:
+      layer: staging
+      grain: one row per activity event (activity_id is not unique)
     columns:
       - name: activity_id
-        description: Pipedrive activity id. Not a reliable key - 11 collisions.
+        description: Pipedrive activity id. Not a reliable key - ids are shared (see the exploratory analysis).
         tests:
           - not_null
           - unique:
@@ -42,10 +45,10 @@ models:
         tests:
           - not_null
       - name: is_done
-        description: Whether the activity is completed. ~50/50 true/false.
+        description: Whether the activity is completed.
         tests:
           - not_null
       - name: due_at
-        description: Scheduled due date/time (2024-01-01 to 2024-09-13).
+        description: Scheduled due date/time.
         tests:
           - not_null

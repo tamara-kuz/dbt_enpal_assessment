@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: int_pipedrive__deals
+    description: >
+      One row per deal, pivoted from the stg_pipedrive__deal_changes event log:
+      creation time, current + furthest stage, current owner, lost_reason.
+      `lost_reason_id` is carried through but is noise (the exploratory analysis
+      found it present on every deal and statistically uniform) - do not derive
+      won/lost from it here.
+    meta:
+      layer: intermediate
+      grain: one row per deal
+    columns:
+      - name: deal_id
+        description: Pipedrive deal id. Primary key of this model.
+        tests:
+          - unique
+          - not_null
+      - name: created_at
+        description: Deal creation timestamp (from the add_time change; earliest if logged twice).
+        tests:
+          - not_null
+      - name: created_month
+        description: created_at truncated to month (date). Grain for the reporting funnel.
+        tests:
+          - not_null
+      - name: current_owner_user_id
+        description: Most recent owner. FK -> stg_pipedrive__users.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pipedrive__users')
+                field: user_id
+      - name: owner_change_count
+        description: Number of user_id changes logged for the deal (>= 1).
+        tests:
+          - not_null
+      - name: current_stage_id
+        description: Stage from the most recent stage_id change.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: max_stage_id
+        description: >
+          Furthest stage the deal reached. Use this for "reached funnel step N"
+          (progression is monotonic but skips stages).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: first_stage_changed_at
+        description: Timestamp of the deal's first stage_id change.
+        tests:
+          - not_null
+      - name: last_stage_changed_at
+        description: Timestamp of the deal's most recent stage_id change.
+        tests:
+          - not_null
+      - name: stage_change_count
+        description: Number of stage_id changes logged for the deal (>= 1).
+        tests:
+          - not_null
+      - name: lost_reason_id
+        description: >
+          Lost-reason code (1-5). Present for every deal and statistically
+          uniform - NOT a won/lost signal. See docs/initial_exploratory_analysis.md 5.3.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: lost_reason_at
+        description: Timestamp of the lost_reason change (latest if logged twice).
+        tests:
+          - not_null

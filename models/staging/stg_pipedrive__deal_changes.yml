@@ -4,20 +4,23 @@ models:
   - name: stg_pipedrive__deal_changes
     description: >
       Staging for the Pipedrive deal field change log. One row per logged change
-      to a single field of a single deal. 15,406 rows across 1,995 deals.
+      to a single field of a single deal.
 
       There is no primary key (append-only event log). `new_value` is polymorphic
       text; typed helper columns (`new_stage_id`, `new_owner_user_id`,
       `deal_created_at`, `new_lost_reason_id`) are populated only for the matching
       `changed_field_key`. This log has no status / won / lost / value keys - deal
       outcome must be inferred from stage progression.
+    meta:
+      layer: staging
+      grain: one row per logged deal field change
     columns:
       - name: deal_id
         description: Deal that changed.
         tests:
           - not_null
       - name: changed_at
-        description: When the change was recorded (2024-01 to 2025-03).
+        description: When the change was recorded.
         tests:
           - not_null
       - name: changed_field_key
@@ -47,7 +50,7 @@ models:
       - name: deal_created_at
         description: >
           Deal creation timestamp, set only when changed_field_key = 'add_time'.
-          Equals the deal's earliest changed_at for 1,992 of 1,995 deals.
+          Equals the deal's earliest changed_at for almost every deal (see the exploratory analysis).
       - name: new_lost_reason_id
         description: >
           Lost-reason code, set only when changed_field_key = 'lost_reason'.

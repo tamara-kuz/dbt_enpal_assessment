@@ -3,9 +3,12 @@ version: 2
 models:
   - name: stg_pipedrive__activity_types
     description: >
-      Staging for the Pipedrive activity-type catalogue. Four rows. `is_active`
+      Staging for the Pipedrive activity-type catalogue. `is_active`
       is a UI configuration flag only - disabled types (follow_up) still have
       historical activity data.
+    meta:
+      layer: staging
+      grain: one row per activity type
     columns:
       - name: activity_type_id
         description: Activity-type id. Primary key (unique + not_null tested on the source).

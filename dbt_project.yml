@@ -31,6 +31,18 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   enpal_assessment_project:
-    # Config indicated by + and applies to all files under models/example/
+    # Config indicated by + and applies to all files under models/
     +schema: pipedrive_analytics
     +materialized: table
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+    presentation:
+      +materialized: table
+
+seeds:
+  enpal_assessment_project:
+    +schema: pipedrive_analytics

@@ -1,3 +1,51 @@
+## Documentation
+
+All work on this assessment is written up in the [`docs/`](docs/) folder.
+
+- **[`docs/initial_exploratory_analysis.md`](docs/initial_exploratory_analysis.md)** — the deep dive into the
+  Pipedrive source data: CRM glossary, the deal lifecycle (stages, activities,
+  status) with diagrams, a full CSV ↔ Postgres comparison, a column-by-column
+  data dictionary with accepted values, source-freshness threshold analysis, and
+  the data-quality findings that shaped the model design.
+- **[`docs/modeling_decisions.md`](docs/modeling_decisions.md)** — rationale for the
+  non-obvious design choices: the layer map, the two shapes of the deal change
+  log (`int_pipedrive__deals` vs `fct_deal_stage_progression`), why `dim_users`
+  is SCD1 but kept anyway, and how the funnel report is built.
+- **[`docs/post_integration_validation.md`](docs/post_integration_validation.md)** —
+  reproducible checks on the built models: (1) why the monthly funnel is a flow,
+  not a cumulative shape, and how it reconciles; (2) why the `2.1` / `3.1` Sales
+  Call rows sit outside the funnel and can't be linked to it.
+
+**The deliverable** is [`models/presentation/rep_sales_funnel_monthly.sql`](models/presentation/rep_sales_funnel_monthly.sql)
+— columns `month`, `kpi_name`, `funnel_step`, `deals_count` exactly as briefed.
+`kpi_name` carries the step name and its kind (`… (stage)` / `… (activity)`);
+`deals_count` counts the deals that reached that step in the month. The 11 step
+names come from the [`funnel_steps`](seeds/funnel_steps.csv) seed. See
+[`models/presentation/README.md`](models/presentation/README.md).
+
+Model-level documentation lives next to the code: source and freshness/PK tests
+in [`models/sources.yml`](models/sources.yml), and per-model column descriptions
+and tests in the layer folders under [`models/`](models/).
+
+**Each `models/` subfolder has its own `README.md`** with that layer's general
+rules — naming conventions, column-naming standards, and how tests are split
+between layers:
+[`staging/`](models/staging/README.md) →
+[`intermediate/`](models/intermediate/README.md) →
+[`marts/`](models/marts/README.md) →
+[`presentation/`](models/presentation/README.md).
+
+### Conventions shared by every model
+
+- **`.sql` file shape:** import CTEs first — one
+  `with <name> as (select * from {{ ref(...) }} / {{ source(...) }})` per
+  upstream, no logic; then transformation CTEs, each with a one-line comment;
+  then a `final` CTE that assembles the output, and `select * from final` as the
+  last line so the returned columns are always in one obvious place.
+- **`.yml` file:** every model and every column carries a `description`, plus
+  `meta` (layer, grain, …) — these feed the data catalogue / `dbt docs`. Grain
+  and any non-obvious behaviour are called out in the model description.
+
 ## Setup
 
 1. Download Docker Desktop (if you don’t have installed) using the official website, install and launch.
@@ -12,7 +60,12 @@
 ```
 5. Connect to the db via a preferred tool (e.g. DataGrip, Dbeaver etc)
 6. Install dbt-core and dbt-postgres using pip (if you don’t have) on your preferred environment.
-7. Now you can run `dbt run` with the test model and check public_pipedrive_analytics schema to see the dbt result (with one test model)
+7. Run `dbt deps` to install packages (`dbt_utils`), then `dbt build` to run
+   every model and test. Results land in the `public_pipedrive_analytics` schema;
+   `rep_sales_funnel_monthly` is the deliverable.
+
+> `dbt source freshness` reports STALE by design — the CSV load is a static 2024
+> snapshot; see `docs/initial_exploratory_analysis.md` §3.1.
 
 ## Project
 1. Remove the test model once you make sure it works

@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: rep_sales_funnel_monthly
+    description: >
+      Monthly sales funnel (the assessment deliverable). One row per
+      (month, funnel_step) - i.e. per funnel step per month - with the count of
+      distinct deals that reached that step in the month. Steps 1-9 from
+      fct_deal_stage_progression; sub-steps 2.1 / 3.1 are Sales Call 1 / 2
+      activity counts from fct_activities (near-disjoint deal population - a
+      parallel read, not sub-counts of steps 2 / 3). The 11 step names come from
+      the stg_seed__funnel_steps seed model. Sparse: zero-count (month, step) rows are
+      omitted.
+    meta:
+      layer: presentation
+      grain: one row per (month, funnel_step)
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [month, funnel_step]
+    columns:
+      - name: month
+        description: Calendar month the deals reached the step (first-of-month date).
+        tests:
+          - not_null
+      - name: kpi_name
+        description: >
+          Funnel step name with its kind appended - "<name> (stage)" for
+          pipeline stages, "<name> (activity)" for the Sales Call sub-steps.
+          The "(activity)" rows are a parallel activity-volume metric on a
+          near-disjoint deal population, NOT sub-counts of the stages.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "Lead Generation (stage)"
+                  - "Qualified Lead (stage)"
+                  - "Sales Call 1 (activity)"
+                  - "Needs Assessment (stage)"
+                  - "Sales Call 2 (activity)"
+                  - "Proposal/Quote Preparation (stage)"
+                  - "Negotiation (stage)"
+                  - "Closing (stage)"
+                  - "Implementation/Onboarding (stage)"
+                  - "Follow-up/Customer Success (stage)"
+                  - "Renewal/Expansion (stage)"
+      - name: funnel_step
+        description: Step number as text - "1".."9", plus "2.1" / "3.1" for the Sales Call sub-steps.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["1", "2", "2.1", "3", "3.1", "4", "5", "6", "7", "8", "9"]
+      - name: deals_count
+        description: Distinct deals that reached this step in this month. Always >= 1 (sparse table).
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                inclusive: true

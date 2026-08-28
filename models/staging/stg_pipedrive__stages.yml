@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__stages
+    description: >
+      Staging for Pipedrive pipeline stages. One row per stage (the nine funnel steps).
+      `stage_id` is the ordered position in the single pipeline and equals the
+      assessment funnel step number.
+    meta:
+      layer: staging
+      grain: one row per pipeline stage
+    columns:
+      - name: stage_id
+        description: Ordered stage position. Primary key (unique + not_null tested on the source).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: stage_name
+        description: Stage label. Note "Qualified lead" casing differs from the fields option set.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - "Lead Generation"
+                  - "Qualified lead"
+                  - "Needs Assessment"
+                  - "Proposal/Quote Preparation"
+                  - "Negotiation"
+                  - "Closing"
+                  - "Implementation/Onboarding"
+                  - "Follow-up/Customer Success"
+                  - "Renewal/Expansion"
+      - name: pipeline_step
+        description: Alias of stage_id, exposed as the funnel step ordinal.
+        tests:
+          - not_null

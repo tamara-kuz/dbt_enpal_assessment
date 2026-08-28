@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__users
+    description: >
+      Staging for Pipedrive users (sales reps / deal owners). One row per user,
+      1:1 with `pipedrive.users`. `email` is lower-cased and blank strings are
+      nulled; `id` is unique.
+    meta:
+      layer: staging
+      grain: one row per Pipedrive user
+    columns:
+      - name: user_id
+        description: Pipedrive user id. Primary key (unique + not_null tested on the source).
+      - name: user_name
+        description: User full name. Not unique (real-name collisions exist).
+      - name: email
+        description: >
+          Lower-cased user email. NOT unique - some addresses are shared by
+          more than one user id.
+      - name: modified_at
+        description: >
+          Timestamp the user record was last modified.
+          No creation timestamp is available in the source.
+        tests:
+          - not_null

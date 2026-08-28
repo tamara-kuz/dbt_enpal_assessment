@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: fct_deal_stage_progression
+    description: >
+      One row per (deal, funnel step) the deal reached, with the first time its
+      stage became >= that step. Stages are skippable but monotonic - a deal
+      recorded at 1 -> 3 has rows for steps 2 and 3. The base fact for funnel,
+      velocity and cohort analysis; feeds rep_sales_funnel_monthly.
+    meta:
+      layer: marts
+      grain: one row per (deal_id, funnel_step)
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [deal_id, funnel_step]
+    columns:
+      - name: deal_id
+        description: Deal that reached the step.
+        tests:
+          - not_null
+      - name: funnel_step
+        description: Pipeline stage 1-9 the deal reached (>= this stage).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                quote: false
+      - name: reached_at
+        description: First time the deal's stage became >= this step.
+        tests:
+          - not_null
+      - name: reached_month
+        description: reached_at truncated to month (date).
+        tests:
+          - not_null

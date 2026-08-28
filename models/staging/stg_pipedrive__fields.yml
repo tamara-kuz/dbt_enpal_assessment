@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: stg_pipedrive__fields
+    description: >
+      Staging for Pipedrive deal-field metadata - the fields that appear in
+      the deal change log, plus their enum option sets. 1:1 with `pipedrive.fields`.
+    meta:
+      layer: staging
+      grain: one row per tracked deal field
+    columns:
+      - name: field_id
+        description: Field id. Primary key (unique + not_null tested on the source).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [3, 10, 13, 23]
+                quote: false
+      - name: field_key
+        description: Field API key, joined by stg_pipedrive__deal_changes.changed_field_key.
+        tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["user_id", "stage_id", "add_time", "lost_reason"]
+      - name: field_name
+        description: Field display name.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["Owner", "Stage", "Deal created", "Lost reason"]
+      - name: field_value_options
+        description: >
+          JSONB array of {id,label} for enum fields (stage_id -> 9 options,
+          lost_reason -> 5 options); NULL for add_time and user_id.
+      - name: is_enum_field
+        description: True when field_value_options is populated.
+        tests:
+          - not_null

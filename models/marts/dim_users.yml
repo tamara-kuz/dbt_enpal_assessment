@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: dim_users
+    description: >
+      User dimension, SCD1 (current state, one row per user).
+      SCD2 not modelled - the source has no history to reconstruct from and no
+      slowly-changing analytical attributes. See docs/initial_exploratory_analysis.md.
+    meta:
+      layer: marts
+      grain: one row per user
+    columns:
+      - name: user_id
+        description: Pipedrive user id. Primary key.
+        tests:
+          - unique
+          - not_null
+      - name: user_name
+        description: User full name (not unique - real-name collisions exist).
+        tests:
+          - not_null
+      - name: email
+        description: User email. NOT unique - some addresses are shared by more than one user.
+        tests:
+          - not_null
+      - name: email_domain
+        description: Domain part of email, for grouping.
+        tests:
+          - not_null
+      - name: is_email_shared
+        description: True when this email is used by more than one user_id.
+        tests:
+          - not_null
+      - name: modified_at
+        description: Last time the user record was modified in the source.
+        tests:
+          - not_null
